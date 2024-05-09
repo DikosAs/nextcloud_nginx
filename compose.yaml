@@ -14,17 +14,39 @@ services:
       - MYSQL_DATABASE=${DB_DATABASE}
 
   cloud:
-    image: nextcloud
+    image: nextcloud:fpm
     container_name: cloud
     restart: unless-stopped
     volumes:
-      - ./cloud_files:/var/www/html
+      - ./cloud/data:/var/www/html/data
+      - ./cloud/config:/var/www/html/config
+      - nextcloud:/var/www/html
+      - cloud-conf-connect:/usr/local/etc
     environment:
+      - NEXTCLOUD_TRUSTED_DOMAINS=${DOMAINS}
+      - NEXTCLOUD_DATA_DIR=${CLOUD_DATA_DIR}
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=${DB_DATABASE}
       - MYSQL_HOST=db
-    ports:
-      - "${CLOUD_PORT}:80"
     depends_on:
       - db
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    volumes:
+      - ./log/nginx:/var/log/nginx
+      - ./config/nginx:/etc/nginx/conf.d:ro
+      - nextcloud:/var/www/html:ro
+      - cloud-conf-connect:/var/connect:ro
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - cloud
+
+volumes:
+  nextcloud:
+  cloud-conf-connect:
